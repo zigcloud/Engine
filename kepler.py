@@ -93,6 +93,7 @@ class KeplerPropagator:
 
 
 if __name__ == "__main__":
+    #TEST
     import astropy.constants as c
 
     omega = np.radians(131.821109)
@@ -107,3 +108,6 @@ if __name__ == "__main__":
     test = KeplerPropagator(KeplerianElements(a,e,incl,Omega,omega,M),c.GM_sun.value, dt)
     test._pprint()
     test._getStateVector()
+    # TEST results shall be
+    #State vector x=-9.248159788726267E7km, y=-1.1841295634767203E7km, z=8.520148585292272E7km
+    #Velocity vector x=-21334.850862085492m/s, y=-28856.374856938717m/s, z=-27168.28164284154m/s
