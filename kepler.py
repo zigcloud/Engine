@@ -8,17 +8,16 @@ class KeplerPropagator:
         self.GM = GM
         self.stateVector = stateVector
 
-
-
     def _pprint(self):
-        print(f'Semimajor axis                 : {np.round(self.elements.a,3)} [m]\n'+
+        print(f'{"="*80}\n'
+              f'Semimajor axis                 : {np.round(self.elements.a,3)} [m]\n'+
               f'Eccentricity                   : {np.round(self.elements.e,3)} [-]\n'+
               f'Inclination                    : {np.round(self.elements.i,3)} [rad]\n'+
               f'Longitude of the ascending node: {np.round(self.elements.Omega,3)} [rad]\n'+
               f'Argument of pericenter         : {np.round(self.elements.omega,3)} [rad]\n'+
-              f'Mean anomaly at epoch          : {np.round(self.elements.M0,3)} [rad]\n\n'
+              f'Mean anomaly at epoch          : {np.round(self.elements.M0,3)} [rad]\n{"="*80}\n'
               f'Gravitational constant         : {np.round(self.GM, 3)} [m3/s2]\n' +
-              f'Julian days since perigee      : {np.round(self.dt, 3)} [days]\n')
+              f'Julian days since perigee      : {np.round(self.dt, 3)} [days]\n{"="*80}')
 
     def _pprint_stateVector(self):
         r = np.round(self.stateVector.r,3) * u.m
@@ -28,11 +27,9 @@ class KeplerPropagator:
 
     def _checkElements(self):
         assert (0 <= self.elements.e <= 1), "Wrong Eccentricity input"
-        assert (0 <= self.elements.omega <= 2*np.pi), "Wrong Longitude of the ascending node input"
+        assert (0 <= abs(self.elements.omega) <= 2*np.pi), "Wrong Longitude of the ascending node input"
         assert (0 <= self.elements.Omega <= 2*np.pi), "Wrong Argument of pericenter input"
         assert (0 <= self.elements.i <= 2*np.pi), "Wrong Inclination input"
-
-
 
     def _getEccAnomaly(self, M):
         maxit = 15
@@ -96,18 +93,30 @@ if __name__ == "__main__":
     #TEST
     import astropy.constants as c
 
-    omega = np.radians(131.821109)
-    Omega = np.radians(32.702746)
-    incl = np.radians(64.850138)
-    e = 0.92813
-    a = 11.747335 * c.au.value
-    M = 0.000000
-    dt = 0.0
-    GM_Earth = 398600.4415e+9
-
-    test = KeplerPropagator(KeplerianElements(a,e,incl,Omega,omega,M),c.GM_sun.value, dt)
-    test._pprint()
-    test._getStateVector()
+    # omega = np.radians(131.821109)
+    # Omega = np.radians(32.702746)
+    # incl = np.radians(64.850138)
+    # e = 0.92813
+    # a = 11.747335 * c.au.value
+    # M = 0.000000
+    # dt = 0.0
+    # GM_Earth = 398600.4415e+9
+    #
+    # test = KeplerPropagator(KeplerianElements(a,e,incl,Omega,omega,M),c.GM_sun.value, dt)
+    # test._pprint()
+    # test._getStateVector()
     # TEST results shall be
     #State vector x=-9.248159788726267E7km, y=-1.1841295634767203E7km, z=8.520148585292272E7km
     #Velocity vector x=-21334.850862085492m/s, y=-28856.374856938717m/s, z=-27168.28164284154m/s
+
+    A = 20828674.192445
+    E = 0.6733951495
+    I = np.radians(28.3044368)
+    NODE = np.radians(150.5656450)
+    PER = np.radians(-26.3798536)
+    TPER = -12998.4727669
+    M = 0
+    test = KeplerPropagator(KeplerianElements(A,E,I,NODE,PER,M),c.GM_earth.value, TPER)
+
+    test._pprint()
+    test._getStateVector()
