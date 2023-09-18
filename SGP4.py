@@ -50,10 +50,10 @@ class Sgp4Propagator:
                 line1 = tle.readline()
                 line2 = tle.readline()
 
-                # if line0 == '':
-                #     raise Exception('no such satellite')
+                if line0 == '':
+                    raise Exception('no such satellite')
 
-                if self.objectID == line1.split()[2] or self.objectID == line2.split()[1]:
+                if self.objectID.id == line1.split()[2] or self.objectID.id == line2.split()[1]:
                     self.satellites.append(Satrec.twoline2rv(line1, line2))
                     break
 

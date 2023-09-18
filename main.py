@@ -10,7 +10,7 @@ from astropy.utils.iers import conf
 from SGP4 import Sgp4Propagator
 from MoonSun import *
 from astropy.table import Table
-conf.auto_max_age = None
+
 
 class Transformator:
     def __init__(self, site: str, observerLocation: EarthLocation, Elements: List[KeplerianElements] or Path, objectID: str,
@@ -262,15 +262,31 @@ if __name__ == '__main__':
     ti = t.time()
     print('computation started')
 
+    #observer Location
     obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
-    tleData = Path(r'./starlinkGEN1_tle.txt')
+    #inputTLE file
+    tleData = Path(r'./selection.txt')
+    #output Table name and path
     outPath = Path(r'./test.txt')
-    a = Transformator(site='AGO',observerLocation=obs, Elements=tleData,objectID='',
-                      TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-09-15T10:00:00',
+
+    #Main class initialization
+    #site - name of the desired site - only for naming
+    #observerLocation - astropy.coordinates.EarthLocation filled with Lon, Lat and Height of the site
+    #Elements - List of Keplerian element (see Utils) or Path to the Tle file
+    #ObjectID - ID of the target - Norad, Cospar, or specific name of population or empty string (than whole
+    # population is taken)
+    #TimeStartIsot - Isot date and time of the start
+    #TimeEndIsot - Isot date and time of the end
+    #TimeStep - in second - length of the ephermeris step also serves as Exposure time to calculate the Length
+    #mode - Kepler or SGP4 - defines which propagator shall be used
+    #verbose - Bool - whether the more talkative output shall be shown or not
+    #savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
+    a = Transformator(site='AGO',observerLocation=obs, Elements=tleData, objectID='',
+                      TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-10-01T10:00:00',
                       TimeStep=600, mode='SGP4', verbose=False, savePath=outPath)
 
-    tbl = a.Run()
-    tbl.pprint_all()
+    tbl = a.Run() #Main transformator's funtion - return astropy.table.Table with names shown in Utils
+    # tbl.pprint_all() #Uncomment to see the table
     print('computation completed, time: ' + str(t.time() - ti))
 
     #PLOTTING
