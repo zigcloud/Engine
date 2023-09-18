@@ -263,7 +263,7 @@ if __name__ == '__main__':
     print('computation started')
 
     obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
-    tleData = Path(r'./starlinkGEN2_tle.txt')
+    tleData = Path(r'./starlinkGEN1_tle.txt')
     outPath = Path(r'./test.txt')
     a = Transformator(site='AGO',observerLocation=obs, Elements=tleData,objectID='',
                       TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-09-15T10:00:00',
