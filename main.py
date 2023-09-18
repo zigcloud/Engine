@@ -215,8 +215,8 @@ class Transformator:
                                               self.dDE[i][j].to(u.arcsec / u.s)) * self.stepTime,  #Length
                       0.0, 0.0, 0.0, 0.0, 0.0,  # 'Beta','A*rho', 'm_abs','m_app','Luminosity'
                       self.shadow[i][j],  #Shadow
-                      self.coordGeodetic[i][j][0].deg * u.deg,  #Longitude
-                      ((self.coordGeodetic[i][j][1].deg%180 )-90)* u.deg  # Latitude
+                      self.coordGeodetic[i].lon[j].deg* u.deg,  #Longitude
+                      self.coordGeodetic[i].lat[j].deg* u.deg  # Latitude
                       ]
                 self.outputTable.add_row(line)
         if self.verbose:
@@ -263,11 +263,11 @@ if __name__ == '__main__':
     print('computation started')
 
     obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
-    tleData = Path(r'./starlinkGEN1_tle.txt')
+    tleData = Path(r'./starlinkGEN2_tle.txt')
     outPath = Path(r'./test.txt')
     a = Transformator(site='AGO',observerLocation=obs, Elements=tleData,objectID='',
                       TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-09-15T10:00:00',
-                      TimeStep=600, mode='Kepler', verbose=False, savePath=outPath)
+                      TimeStep=600, mode='SGP4', verbose=False, savePath=outPath)
 
     tbl = a.Run()
     tbl.pprint_all()
@@ -282,4 +282,49 @@ if __name__ == '__main__':
     import contextily as cx
 
 
+    def scatter_hist(x, y, ax, ax_histx, ax_histy):
+        ax_histx.tick_params(axis="x", labelbottom=False)
+        ax_histy.tick_params(axis="y", labelleft=False)
+
+        # the scatter plot:
+        ax.scatter(x, y)
+        xbinwidth = 10
+        ybinwidth = 10
+
+        xmax = np.max(np.abs(x))
+        ymax = np.max(np.abs(y))
+        xlim = (int(xmax / xbinwidth) + 1) * xbinwidth
+        ylim = (int(ymax / ybinwidth) + 1) * ybinwidth
+        xbins = np.arange(-xlim, xlim + xbinwidth, xbinwidth)
+        ybins = np.arange(-ylim, ylim + ybinwidth, ybinwidth)
+
+        ax_histx.hist(x, bins=xbins)
+        ax_histy.hist(y, bins=ybins, orientation='horizontal')
+
+    countries = gpd.read_file(gpd.datasets.get_path("naturalearth_cities"))
+    countries.head()
+    fig = plt.figure(figsize=(20,12),layout='constrained')
+    # Create the main axes, leaving 25% of the figure space at the top and on the
+    # right to position marginals.
+
+    ax = fig.add_gridspec(top=0.75, right=0.75).subplots()
+    # The main axes' aspect can be fixed.
+    ax.set(aspect=1)
+
+    ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
+    ax_histy = ax.inset_axes([1.05, 0, 0.25, 1], sharey=ax)
+    # Draw the scatter plot and marginals.
+    x = [line[0] for line in tbl.iterrows('Lon')]
+    y = [line[0] for line in tbl.iterrows('Lat')]
+    labels = [line[0] for line in tbl.iterrows('ObjectID')]
+    scatter_hist(x, y, ax, ax_histx, ax_histy)
+    cx.add_basemap(ax, crs=countries.crs.to_string(), source=cx.providers.CartoDB.Voyager)
+
+    plt.xlabel("Longitude [°]")
+    plt.ylabel("Latitude [°]")
+    # whole world
+    plt.xlim(-180, 180)
+    plt.ylim(-85, 85)
+    # plt.legend(loc='lower center', bbox_to_anchor =(0.5,-0.3), ncol=4)
+    plt.show()
 
