@@ -7,16 +7,21 @@ from astropy.utils.iers import conf
 
 conf.auto_max_age = None
 class MoonSunGenerator:
-    def __init__(self, observerLocation: EarthLocation, TimeStartIsot: str, TimeEndIsot: str, TimeStep: float):
+    def __init__(self, siteName: str, observerLocation: EarthLocation, timeArray = None,
+                 TimeStartIsot: str= None, TimeEndIsot: str= None, TimeStep: float= None):
+        self.site = siteName
         self.observer = observerLocation
-        self.startTime = Time(TimeStartIsot, format='isot', scale='utc')
-        self.endTime = Time(TimeEndIsot, format='isot', scale='utc')
-        self.stepTime = TimeDelta(TimeStep, format='sec')
+        if timeArray is not None:
+            self.timeArray = timeArray
+        else:
+            self.startTime = Time(TimeStartIsot, format='isot', scale='utc')
+            self.endTime = Time(TimeEndIsot, format='isot', scale='utc')
+            self.stepTime = TimeDelta(TimeStep, format='sec')
+            self._getTimeArray()
 
     def _getTimeArray(self):
         duration = np.ceil((self.endTime - self.startTime).jd*86400)
-        nSteps = int(duration/self.stepTime.sec)+1
-        print(duration,nSteps)
+        nSteps = int(duration/self.stepTime.sec)+2
         self.timeArray = Time([(self.startTime + i*self.stepTime).isot for i in range(nSteps)], format='isot')
 
     def sun(self, loc, time):
@@ -27,8 +32,7 @@ class MoonSunGenerator:
         self.moonaltaz = get_body("moon",time).transform_to(AltAz(location=loc, obstime=time))
         self.moonradec = ConvertAltAzToRADEC(self.moonaltaz)
 
-    def saveMoonSun(self):
-        self._getTimeArray()
+    def getMoonSun(self):
         self.sun(self.observer,self.timeArray)
         self.moon(self.observer,self.timeArray)
         keywords = ['mjd', 'isot', 'az_sun', 'alt_sun', 'az_moon', 'alt_moon', 'RA_t_sun', 'DE_t_sun',
@@ -37,21 +41,26 @@ class MoonSunGenerator:
                          self.moonaltaz.az.deg, self.moonaltaz.alt.deg, self.sunradec.ra.deg, self.sunradec.dec.deg,
                          self.moonradec.ra.deg, self.moonradec.dec.deg], dtype='O').transpose()
 
-        return dict(zip(self.timeArray.mjd, [dict(zip(keywords, x)) for x in data]))
+        moonSunJson = {self.site: dict(zip(self.timeArray.mjd, [dict(zip(keywords, x)) for x in data]))}
+
+        # with open(filename, 'w') as file:
+        #     json.dump(moonSunJson, file, indent=3)
+        return moonSunJson
 
 
+    # def readAlreadyCalculated(self):
 if __name__ == "__main__":
     import json
     import astropy.units as u
     import time as t
-    with open('/Users/matoz/Documents/FMPH/PECS7-LightPolution/GitEngine/Stations.json','r') as js:
-        data = json.load(js)
 
-    obs = EarthLocation(lon=data['AGO']['Lon']*u.deg, lat=data['AGO']['Lat']*u.deg, height=data['AGO']['Alt']*u.m)
-    ms = MoonSunGenerator(obs,'2023-01-01T00:00:00','2024-01-01T00:00:00',600)
+    obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
+    ms = MoonSunGenerator(siteName='AGO', observerLocation=obs,TimeStartIsot='2023-01-01T00:00:00',
+                          TimeEndIsot='2024-01-01T00:00:00',TimeStep=600)
     ti = t.time()
     print('computation started')
-    result = {'AGO': ms.saveMoonSun()}
-    with open('AGO_moonSun.json','w') as js:
-        json.dump(result,js,indent=3)
+    result = ms.getMoonSun()
+    print(result)
+    # with open('AGO_moonSun.json','w') as js:
+    #     json.dump(result,js,indent=3)
     print('computation completed, time: ' + str(t.time() - ti))

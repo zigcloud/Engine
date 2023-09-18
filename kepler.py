@@ -9,8 +9,9 @@ from astropy.utils.iers import conf
 
 conf.auto_max_age = None
 class KeplerPropagator:
-    def __init__(self, observerLocation: EarthLocation, Kepler: List[KeplerianElements] or Path, objectID: str,
-                 TimeStartIsot: str, TimeEndIsot: str, TimeStep: float):
+    def __init__(self, site: str, observerLocation: EarthLocation, Kepler: List[KeplerianElements] or Path, objectID: str,
+                 TimeStartIsot: str, TimeEndIsot: str, TimeStep: float, verbose: bool = False):
+        self.site = site
         if type(Kepler) == list:
             self.elements = np.array(Kepler)
         else:
@@ -23,6 +24,7 @@ class KeplerPropagator:
         self.endTime = Time(TimeEndIsot, format='isot', scale='utc')
         self.stepTime = TimeDelta(TimeStep, format='sec')
         self.obs = observerLocation
+        self.verbose = verbose
 
 
     def _pprint(self):
@@ -45,7 +47,6 @@ class KeplerPropagator:
     def _pprint_stateVector(self):
         for i,obj in enumerate(self.stateVector):
             for j, step in enumerate(obj):
-                print(step.r)
                 r = (np.round(step.r,3) * u.m).to(u.km)
                 v = (np.round(step.v,3) * (u.m/u.s)).to(u.km/u.s)
                 print(f'Object ID position  : {self.elements[i].id.id}\n'
@@ -62,30 +63,21 @@ class KeplerPropagator:
 
     def _getTimeArray(self):
         duration = np.ceil((self.endTime - self.startTime).jd * 86400)
-        nSteps = int(duration/self.stepTime.sec)+1
+        nSteps = int(duration/self.stepTime.sec)+2
         self.timeArray = Time([(self.startTime + i*self.stepTime).isot for i in range(nSteps)], format='isot')
 
-    def solve_cubic(self, a, c, d):
-        assert (a > 0 and c > 0)
-        p = c / a
-        q = d / a
-        k = np.sqrt(q ** 2 / 4 + p ** 3 / 27)
-        return np.cbrt(-q / 2 - k) + np.cbrt(-q / 2 + k)
-    def machin(self, e, M):
-        n = np.sqrt(5 + np.sqrt(16 + 9 / e))
-        a = n * (e * (n ** 2 - 1) + 1) / 6
-        c = n * (1 - e)
-        d = -M
-        s = self.solve_cubic(a, c, d)
-        return n * np.arcsin(s)
+
     def _getEccAnomaly(self, keplerElements: KeplerianElements, M):
         maxit = 15
         eps = 10e-9
 
         i=0
-        M = M % 2*np.pi
+        M = M % np.pi/2
 
-        E = self.machin(keplerElements.e,M)
+        if keplerElements.e<0.8:
+            E=M
+        else:
+            E=np.pi;
 
         f = E - keplerElements.e * np.sin(E) - M
         E = E - f / (1.0 - keplerElements.e * np.cos(E))
@@ -142,25 +134,38 @@ class KeplerPropagator:
 
     def propagate(self):
         self._getTimeArray()
-        # vect = np.vectorize(self._getStateVector)
-        # state = vect(self.elements, self.timeArray)
-        self.stateVector = [[self._getStateVector(obj, time) for time in self.timeArray] for obj in self.elements]
-        self._pprint_stateVector()
+        for obj in self.elements:
+            objState = []
+            for time in self.timeArray:
+                s = self._getStateVector(obj, time)
+                objState.append(stateVector(s.r,s.v))
+        # state = [[self._getStateVector(obj, time) for time in self.timeArray] for obj in self.elements]
+            self.stateVector.append(objState)
+        if self.verbose:
+            self._pprint_stateVector()
 
 if __name__ == "__main__":
     #TEST
     import astropy.constants as c
 
-    # omega = np.radians(131.821109)
-    # Omega = np.radians(32.702746)
-    # incl = np.radians(64.850138)
-    # e = 0.92813
-    # a = 11.747335 * c.au.value
-    # M = 0.000000
-    # dt = 0.0
-    # GM_Earth = 398600.4415e+9
+    omega = np.radians(131.821109)
+    Omega = np.radians(32.702746)
+    incl = np.radians(64.850138)
+    e = 0.92813
+    a = 11.747335 * c.au.value
+    M = 0.000000
+    dt = 0.0
+    GM_Earth = 398600.4415e+9
     #
-    # test = KeplerPropagator(KeplerianElements(a,e,incl,Omega,omega,M),c.GM_sun.value, dt)
+
+    obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
+
+    # test = KeplerPropagator(obs,[KeplerianElements(a,e,incl,Omega,omega,M,timeSincePerigee=dt)],
+    #                         c.GM_sun.value,'2023-09-15T10:00:00', '2023-09-17T10:10:00', 600)
+    # test.propagate()
+    # test.pp
+
+
     # test._pprint()
     # test._getStateVector()
     # TEST results shall be
@@ -175,17 +180,12 @@ if __name__ == "__main__":
     TPER = -12998.4727669
     M = 0
     # test = KeplerPropagator(KeplerianElements(A,E,I,NODE,PER,M),c.GM_earth.value, TPER)
-    import json
-    with open('/Users/matoz/Documents/FMPH/PECS7-LightPolution/GitEngine/Stations.json','r') as js:
-        data = json.load(js)
-
-    obs = EarthLocation(lon=data['AGO']['Lon']*u.deg, lat=data['AGO']['Lat']*u.deg, height=data['AGO']['Alt']*u.m)
 
     import time as t
     ti = t.time()
     print('computation started')
-    test = KeplerPropagator(obs, Path('/Users/matoz/Documents/Ephemeris/data/20230228/selection.txt'),'',
-                            '2023-09-15T10:00:00', '2023-09-15T10:10:00', 600)
+    test = KeplerPropagator('AGO',obs, Path('/Users/matoz/Documents/Ephemeris/data/20230228/selection.txt'),'',
+                            '2023-09-15T10:00:00', '2023-09-17T10:10:00', 600)
     # test._pprint()
     test.propagate()
 

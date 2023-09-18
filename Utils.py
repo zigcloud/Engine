@@ -12,6 +12,25 @@ from astropy.coordinates import AltAz, GCRS, SkyCoord
 import astropy.constants as c
 import astropy.units as u
 
+fullCircle = 360
+halfCircle = 180
+secondsInMinute = 60
+secondsInHour = 3600
+secondsInDay = 86400
+minutesInHour = 60
+minutesInDay = 1440
+hoursInDay = 24
+dummyAPmag = 20
+rightAngle = 90
+earthRadiusInMetres = 6378150
+mjdJdShift = 2400000.5
+outputTablenames = ['ObjectID','MJD','Range','Phase angle','RA','DE',
+                    'dRA','dDE','Length','Beta','A*rho', 'm_abs','m_app','Luminosity', 'Shadow', 'Lon', 'Lat']
+outputTabletypes = [str, float, float, float,float,float,
+                    float,float,float,float,float,float,float,float, bool, float, float]
+outputTableunits = ['',u.day, u.m, u.deg, u.deg, u.deg,
+                    u.arcsec / u.s, u.arcsec / u.s, u.arcsec, '--','--','--','--','--', '--', u.deg, u.deg]
+
 @dataclass_json
 @dataclass
 class ObjectID(object):

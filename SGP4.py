@@ -11,9 +11,9 @@ from astropy.coordinates import EarthLocation
 
 
 class Sgp4Propagator:
-    def __init__(self, observerLocation: EarthLocation, TlePath: Path, objID: str,
-                 TimeStartIsot: str, TimeEndIsot: str, TimeStep: float):
-
+    def __init__(self, site: str, observerLocation: EarthLocation, TlePath: Path, objID: str,
+                 TimeStartIsot: str, TimeEndIsot: str, TimeStep: float, verbose: bool = False):
+        self.site = site
         self.observer = observerLocation
         self.tle = TlePath
         self.objectID = ObjectID(objID)
@@ -24,6 +24,7 @@ class Sgp4Propagator:
         converter = TLEtoKeplerConverter(TlePath, objID)
         self.elements = np.array(converter.converter())
         self.stateVector = []
+        self.verbose = verbose
     def _pprint_stateVector(self):
         for i,obj in enumerate(self.stateVector):
             for j, step in enumerate(obj):
@@ -79,7 +80,7 @@ class Sgp4Propagator:
 
     def _getTimeArray(self):
         duration = np.ceil((self.endTime - self.startTime).jd * 86400)
-        nSteps = int(duration/self.stepTime.sec)+1
+        nSteps = int(duration/self.stepTime.sec)+2
         self.timeArray = Time([(self.startTime + i*self.stepTime).isot for i in range(nSteps)], format='isot')
 
     def propagate(self):
@@ -88,25 +89,23 @@ class Sgp4Propagator:
 
         moonSun = MoonSunGenerator(self.observer, self.startTime.isot, self.endTime.isot, self.stepTime.sec)
         satGCRS = [[sat.sgp4(obsTime.jd, 0) for obsTime in self.timeArray] for sat in self.satellites]
-        self.stateVector = [[stateVector(r=np.array(sat[0][1])*1000, v=np.array(sat[0][2])*1000) for time in self.timeArray] for sat in satGCRS]
-        self._pprint_stateVector()
+        self.stateVector = [[stateVector(r=np.array(sat[i][1])*1000, v=np.array(sat[i][2])*1000) for i,time in enumerate(self.timeArray)] for sat in satGCRS]
+        if self.verbose:
+            self._pprint_stateVector()
 
 
 if __name__ == "__main__":
     from pathlib import Path
     tle = Path('/Users/matoz/Documents/Ephemeris/data/20230228/selection.txt')
 
-    import json
     import astropy.units as u
     import time as t
-    with open('/Users/matoz/Documents/FMPH/PECS7-LightPolution/GitEngine/Stations.json','r') as js:
-        data = json.load(js)
 
-    obs = EarthLocation(lon=data['AGO']['Lon']*u.deg, lat=data['AGO']['Lat']*u.deg, height=data['AGO']['Alt']*u.m)
+    obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
     ti = t.time()
     print('computation started')
-    sP = Sgp4Propagator(obs, Path('/Users/matoz/Documents/Ephemeris/data/20230228/selection.txt'),'',
-                            '2023-09-15T10:00:00', '2023-09-15T10:10:00', 600)
+    sP = Sgp4Propagator('AGO', obs, Path('/Users/matoz/Documents/Ephemeris/data/20230228/selection.txt'), '',
+                        '2023-09-15T10:00:00', '2023-09-17T10:10:00', 600)
 
     sP.propagate()
     a = sP.stateVector
