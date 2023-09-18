@@ -216,7 +216,7 @@ class Transformator:
                       0.0, 0.0, 0.0, 0.0, 0.0,  # 'Beta','A*rho', 'm_abs','m_app','Luminosity'
                       self.shadow[i][j],  #Shadow
                       self.coordGeodetic[i][j][0].deg * u.deg,  #Longitude
-                      self.coordGeodetic[i][j][1].deg * u.deg  # Longitude
+                      ((self.coordGeodetic[i][j][1].deg%180 )-90)* u.deg  # Latitude
                       ]
                 self.outputTable.add_row(line)
         if self.verbose:
@@ -263,8 +263,8 @@ if __name__ == '__main__':
     print('computation started')
 
     obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
-    tleData = Path('/Users/matoz/Documents/Ephemeris/data/PECS7/starlinkGEN1_tle.txt')
-    outPath = Path('/Users/matoz/Documents/FMPH/PECS7-LightPolution/GitEngine/test.txt')
+    tleData = Path(r'./starlinkGEN1_tle.txt')
+    outPath = Path(r'./test.txt')
     a = Transformator(site='AGO',observerLocation=obs, Elements=tleData,objectID='',
                       TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-09-15T10:00:00',
                       TimeStep=600, mode='Kepler', verbose=False, savePath=outPath)
@@ -272,5 +272,14 @@ if __name__ == '__main__':
     tbl = a.Run()
     tbl.pprint_all()
     print('computation completed, time: ' + str(t.time() - ti))
+
+    #PLOTTING
+    import matplotlib
+    matplotlib.rcParams.update({'font.size': 12})
+    from scipy.interpolate import CubicSpline
+    import matplotlib.pyplot as plt
+    import geopandas as gpd
+    import contextily as cx
+
 
 
