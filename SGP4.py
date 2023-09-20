@@ -8,6 +8,7 @@ from astropy.time import Time, TimeDelta
 from datetime import datetime
 from MoonSun import MoonSunGenerator
 from astropy.coordinates import EarthLocation
+from TLEtoKepler import TLEtoKeplerConverter
 
 
 class Sgp4Propagator:

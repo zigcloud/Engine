@@ -10,6 +10,7 @@ from astropy.utils.iers import conf
 from SGP4 import Sgp4Propagator
 from MoonSun import *
 from astropy.table import Table
+from TLEtoKepler import TLEtoKeplerConverter
 
 
 class Transformator:
@@ -167,7 +168,6 @@ class Transformator:
         self.shadow = []
         for obj in self.propagator.stateVector:
             sat = []
-            satV = []
             for i, time in enumerate(self.propagator.timeArray):
                 satItrs = self.ConvertGcrsToItrs(Time(time,format='isot'),obj[i].r)
                 sat.append(satItrs)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
     #observer Location
     obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
     #inputTLE file
-    tleData = Path(r'./selection.txt')
+    tleData = Path(r'./starlinkVLEO_tle.txt')
     #output Table name and path
     outPath = Path(r'./test.txt')
 
