@@ -1,30 +1,29 @@
-from Utils import *
-from typing import List
-from pathlib import Path
-import astropy.units as u
-import astropy.constants as c
-from astropy.time import Time, TimeDelta
-from astropy.coordinates import EarthLocation, SkyCoord
 from kepler import KeplerPropagator
 from astropy.utils.iers import conf
 from SGP4 import Sgp4Propagator
 from MoonSun import *
 from astropy.table import Table
 from TLEtoKepler import TLEtoKeplerConverter
+import time as t
+
+
 
 
 class Transformator:
     def __init__(self, site: str, observerLocation: EarthLocation, Elements: List[KeplerianElements] or Path, objectID: str,
                  TimeStartIsot: str, TimeEndIsot: str, TimeStep: float, mode: str = 'Kepler', verbose: bool = False,
-                 savePath: Path = None):
+                 savePath: Path = None, phaseParams: Path = Path('./Resources/summaryPhaseCurveTable.json')):
         self.site = site
+        self.inputID = objectID
+        self.mode = mode
+        self.runID = Time.now().to_datetime().strftime('%Y%m%d%H%M%S')
         if type(Elements) == list:
             self.elements = np.array(Elements)
-            print(f'Objects to be evaluaeted: {len(self.elements)}')
+            print(f'TLEs read!\nObjects to be evaluaeted: {len(self.elements)}')
         else:
             converter = TLEtoKeplerConverter(Elements, objectID)
             self.elements = np.array(converter.converter())
-            print(f'Objects to be evaluaeted: {len(self.elements)}')
+            print(f'TLEs read!\nObjects to be evaluaeted: {len(self.elements)}')
         self.GM = c.GM_earth.value
         self.stateVector = []
         self.startTime = Time(TimeStartIsot, format='isot', scale='utc')
@@ -33,7 +32,7 @@ class Transformator:
         self.obs = observerLocation
         self.verbose = verbose
         self.savePath = savePath
-
+        print(f'Propagator {mode} initialization ...')
         if mode == 'Kepler':
             self.propagator = KeplerPropagator(site, observerLocation, Elements, objectID, TimeStartIsot,
                                                TimeEndIsot, TimeStep, verbose=self.verbose)
@@ -42,6 +41,11 @@ class Transformator:
                                              TimeEndIsot, TimeStep, verbose=self.verbose)
         else:
             exit('Bad mode selected!')
+        print(f'Propagator {mode} initialization done!')
+        self.phaseParams = getTableFromJson(phaseParams)
+
+
+
 
     def GetGMSTofTime(self, time):
         """
@@ -135,7 +139,7 @@ class Transformator:
         v1 = b - a
         v2 = b - c
         res = np.sum(v1 * v2, axis=1) / (np.linalg.norm(v1, axis=1) * np.linalg.norm(v2, axis=1))
-        return np.degrees(np.arccos(res))
+        return np.arccos(res)
 
     def GetRatesVectorised(self, val, deltaTime):
         """
@@ -161,9 +165,40 @@ class Transformator:
 
     def GetRatesProjection(self, dRA, dDE):
         return np.sqrt(dRA**2+dDE**2)
+
+    def getBeta(self, phaseParams, element):
+        #TODO - properly selected which Beta shall be used
+        if len(phaseParams[phaseParams['norad']==element.id.id])>0:
+            return np.median(phaseParams[phaseParams['norad']==element.id.id]['Hejduk_med_beta'])
+        elif len(isStringInTable(phaseParams,element.id.name,2))>0:
+            return np.median(isStringInTable(phaseParams, element.id.name,2)['Hejduk_med_beta'])
+        else:
+            return np.median(phaseParams['Hejduk_med_beta'])
+
+    def getArho(self, phaseParams, element):
+        #TODO - properly selected which AreaRho shall be used
+
+        if len(phaseParams[phaseParams['norad']==element.id.id])>0:
+            return np.median(phaseParams[phaseParams['norad']==element.id.id]['Hejduk_med_AreaRo'])
+        elif len(isStringInTable(phaseParams,element.id.name,2))>0:
+            return np.median(isStringInTable(phaseParams, element.id.name,2)['Hejduk_med_AreaRo'])
+        else:
+            return np.median(phaseParams['Hejduk_med_AreaRo'])
+
     def Run(self):
+        ti = t.time()
+        print('Propagation Started')
         self.propagator.propagate()
+        print('Propagation completed, time: ' + str(t.time() - ti))
+        ti = t.time()
+        print('Get Moon and SUn')
+
         self.getMoonSun(self.propagator.timeArray)
+        print('Moon and Sun generated, time: ' + str(t.time() - ti))
+
+        ti = t.time()
+        print('Transformation sterted')
+
         self.coordsITRS = []
         self.shadow = []
         for obj in self.propagator.stateVector:
@@ -195,7 +230,22 @@ class Transformator:
         self.dDE = [self.GetRatesVectorised(self.coordsGCRS[obj].dec, self.stepTime.to(u.day))
                     for obj in range(len(self.coordsGCRS))]
 
+        self.beta = [self.getBeta(self.phaseParams, self.elements[obj]) for obj in range(len(self.elements))]
+        self.areaRho = [self.getArho(self.phaseParams, self.elements[obj]) for obj in range(len(self.elements))]
 
+        self.magApp = [Hejduk_F1F2_beta(self.phaseAngle[obj], self.areaRho[obj], self.beta[obj])
+                       for obj in range(len(self.elements))]
+        self.magAbs = [Hejduk_F1F2_beta(0, self.areaRho[obj], self.beta[obj])
+                       for obj in range(len(self.elements))]
+
+
+        self.magAbs = [Hejduk_F1F2_beta(0, self.areaRho[obj], self.beta[obj])
+                       for obj in range(len(self.elements))]
+        #TODO - to implement Luminosity function GetLuminosity
+        self.luminosity = [GetLuminosity(self.propagator.timeArray) for obj in range(len(self.elements))]
+
+        print('Tranformation done, time: ' + str(t.time() - ti))
+        print('Generating output Table ...')
         self.generateOutputTable()
         return self.outputTable
 
@@ -213,7 +263,11 @@ class Transformator:
                       self.dDE[i][j].to(u.arcsec / u.s),  #dDE - only single value for now
                       self.GetRatesProjection(self.dRA[i][j].to(u.arcsec / u.s),
                                               self.dDE[i][j].to(u.arcsec / u.s)) * self.stepTime,  #Length
-                      0.0, 0.0, 0.0, 0.0, 0.0,  # 'Beta','A*rho', 'm_abs','m_app','Luminosity'
+                      self.beta[i], # 'Beta'
+                      self.areaRho[i], # 'A*rho'
+                      self.magAbs[i], # 'm_abs'
+                      self.magApp[i][j], # 'm_app'
+                      self.luminosity[i][j], # 'Luminosity'
                       self.shadow[i][j],  #Shadow
                       self.coordGeodetic[i].lon[j].deg* u.deg,  #Longitude
                       self.coordGeodetic[i].lat[j].deg* u.deg  # Latitude
@@ -228,7 +282,21 @@ class Transformator:
 
 
     def SaveOutputTable(self):
-        self.outputTable.write(self.savePath, delimiter='\t', format='ascii.basic', overwrite=True)
+        if self.inputID == '':
+            self.filename = f'{self.site}_{self.runID}_all_{self.mode}.txt'
+        else:
+            self.filename = f'{self.site}_{self.runID}_{self.inputID}_{self.mode}.txt'
+
+        out = self.outputTable
+        rounding = dict(zip(outputTablenames, outputTableround))
+        out.round(rounding)
+        with open(Path(self.savePath,self.filename), 'w') as f:
+            f.write('#'+ '\t'.join(outputTablenames)+'\n')
+            f.write('#'+ '\t'.join([str(un) for un in outputTableunits])+'\n')
+            for line in out:
+                f.write('\t'.join(str(n) for n in line)+'\n')
+
+        print(f'Output saved at: {Path(self.savePath,self.filename).resolve()}')
 
 
     def getMoonSun(self, timeArr):
@@ -265,9 +333,9 @@ if __name__ == '__main__':
     #observer Location
     obs = EarthLocation(lon=17.2736306*u.deg, lat=48.372528*u.deg, height=536.1*u.m)
     #inputTLE file
-    tleData = Path(r'./starlinkVLEO_tle.txt')
+    tleData = Path(r'./3le.txt')
     #output Table name and path
-    outPath = Path(r'./test.txt')
+    outPath = Path(r'./')
 
     #Main class initialization
     #site - name of the desired site - only for naming
@@ -281,12 +349,14 @@ if __name__ == '__main__':
     #mode - Kepler or SGP4 - defines which propagator shall be used
     #verbose - Bool - whether the more talkative output shall be shown or not
     #savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
-    a = Transformator(site='AGO',observerLocation=obs, Elements=tleData, objectID='',
-                      TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-10-01T10:00:00',
-                      TimeStep=600, mode='SGP4', verbose=False, savePath=outPath)
+    #phaseParams - Path to the summary json file with result from the phase curve fitting. Particular files can
+    # be merged into the sinlge json with outside function readJsonDat.py
+    a = Transformator(site='AGO',observerLocation=obs, Elements=tleData, objectID='37775',
+                      TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-11-15T10:00:00',
+                      TimeStep=600, mode='Kepler', verbose=False, savePath=outPath,
+                      phaseParams=Path('./Resources/summaryPhaseCurveTable.json'))
 
     tbl = a.Run() #Main transformator's funtion - return astropy.table.Table with names shown in Utils
-    # tbl.pprint_all() #Uncomment to see the table
     print('computation completed, time: ' + str(t.time() - ti))
 
     #PLOTTING
@@ -319,14 +389,17 @@ if __name__ == '__main__':
 
     countries = gpd.read_file(gpd.datasets.get_path("naturalearth_cities"))
     countries.head()
-    fig = plt.figure(figsize=(20,12),layout='constrained')
+    fig = plt.figure(figsize=(20,10),layout='constrained')
+    plt.suptitle(a.filename.replace('.txt',''))
     # Create the main axes, leaving 25% of the figure space at the top and on the
     # right to position marginals.
 
     ax = fig.add_gridspec(top=0.75, right=0.75).subplots()
     # The main axes' aspect can be fixed.
-    ax.set(aspect=1)
-
+    ax.set(aspect=0.5)
+    # whole world
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(-85, 85)
     ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
     ax_histy = ax.inset_axes([1.05, 0, 0.25, 1], sharey=ax)
     # Draw the scatter plot and marginals.
@@ -338,9 +411,6 @@ if __name__ == '__main__':
 
     plt.xlabel("Longitude [°]")
     plt.ylabel("Latitude [°]")
-    # whole world
-    plt.xlim(-180, 180)
-    plt.ylim(-85, 85)
-    # plt.legend(loc='lower center', bbox_to_anchor =(0.5,-0.3), ncol=4)
+    plt.savefig(Path(outPath,a.filename.replace('.txt','.png')), format='png',dpi=300)
     plt.show()
 

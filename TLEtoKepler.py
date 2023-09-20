@@ -3,17 +3,17 @@ from Utils import *
 class TLEtoKeplerConverter:
     def __init__(self, tle: Path, objectID: str):
         self.tle = tle
-        self.objectID = ObjectID(objectID)
+        self.inputID = inputID(objectID)
         self.lines0 = []
         self.lines1 = []
         self.lines2 = []
 
     def decide3leFunction(self):
-        if self.objectID.norad or self.objectID.cospar:
+        if self.inputID.norad or self.inputID.cospar:
             self._getSatFrom3le()
-        elif self.objectID.population:
+        elif self.inputID.population:
             self._getNSatsFrom3le(30)
-        elif self.objectID.directTles:
+        elif self.inputID.directTles:
             self._getAllSatsFrom3le()
     def _getSatFrom3le(self):
         with open(self.tle, 'r') as tle:
@@ -25,7 +25,7 @@ class TLEtoKeplerConverter:
                 if line0 == '':
                     raise Exception('no such satellite')
 
-                if self.objectID.id == line1.split()[2] or self.objectID.id == line2.split()[1]:
+                if self.inputID.id == line1.split()[2] or self.inputID.id == line2.split()[1]:
                     self.lines0.append(line0)
                     self.lines1.append(line1)
                     self.lines2.append(line2)
@@ -39,7 +39,7 @@ class TLEtoKeplerConverter:
                 # if line0 == '':
                 #     raise Exception('no such satellite')
 
-                if self.objectID.id in line0:
+                if self.inputID.id in line0:
                     self.lines0.append(line0)
                     self.lines1.append(line1)
                     self.lines2.append(line2)
@@ -57,7 +57,7 @@ class TLEtoKeplerConverter:
         keplerian_elements = []
 
         for line0, line1, line2 in zip(self.lines0, self.lines1, self.lines2):
-            obj = ObjectID(str(line2.split()[1]))
+            obj = ObjectID(str(line2.split()[1]), line0.split()[1])
             e = float(f'0.{line2[26:33]}')
             i = float(line2[8:16])
             Omega = float(line2[17:25])
@@ -72,7 +72,7 @@ class TLEtoKeplerConverter:
             yearJD = Time(f'{year}-01-01T00:00:00', format='isot').jd
             epoch = Time(yearJD + float(f'{line1[20:32]}'), format='jd')
 
-            a = (np.cbrt((c.G.value*c.M_earth.value)/np.power(n*2*np.pi/86400,2)))/1000
+            a = (np.cbrt((c.G.value*c.M_earth.value)/np.power(n*2*np.pi/86400, 2)))/1000
             keplerian_elements.append(KeplerianElements(a=a*1000,e=e,i=np.radians(i),Omega=np.radians(Omega),
                                                         omega=np.radians(omega), M0=np.radians(M),
                                                         epoch=epoch, n=n_rad_per_day, id=obj))

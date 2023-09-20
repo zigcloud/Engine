@@ -24,13 +24,23 @@ class MoonSunGenerator:
         nSteps = int(duration/self.stepTime.sec)+2
         self.timeArray = Time([(self.startTime + i*self.stepTime).isot for i in range(nSteps)], format='isot')
 
+    def ConvertAltAzToRADEC(self,satelliteAltAz):
+        """
+        Convert object position in altaz frame to radec topocentric
+        @param satelliteAltAz: astropy.coordinates.SkyCoord (altaz frame)
+        @return: astropy.coordinates.SkyCoord (gcrs frame)
+        """
+        satellite_altaz_2 = AltAz(az=satelliteAltAz.spherical.lon, alt=satelliteAltAz.spherical.lat,
+                                        obstime=satelliteAltAz.obstime, location=satelliteAltAz.location)
+        res = satellite_altaz_2.transform_to(GCRS(obstime=satelliteAltAz.obstime))
+        return SkyCoord(res)
     def sun(self, loc, time):
         self.sunaltaz = get_body("sun",time).transform_to(AltAz(location=loc, obstime=time))
-        self.sunradec = ConvertAltAzToRADEC(self.sunaltaz)
+        self.sunradec = self.ConvertAltAzToRADEC(self.sunaltaz)
 
     def moon(self, loc, time):
         self.moonaltaz = get_body("moon",time).transform_to(AltAz(location=loc, obstime=time))
-        self.moonradec = ConvertAltAzToRADEC(self.moonaltaz)
+        self.moonradec = self.ConvertAltAzToRADEC(self.moonaltaz)
 
     def getMoonSun(self):
         self.sun(self.observer,self.timeArray)
@@ -43,12 +53,10 @@ class MoonSunGenerator:
 
         moonSunJson = {self.site: dict(zip(self.timeArray.mjd, [dict(zip(keywords, x)) for x in data]))}
 
-        # with open(filename, 'w') as file:
-        #     json.dump(moonSunJson, file, indent=3)
+
         return moonSunJson
 
 
-    # def readAlreadyCalculated(self):
 if __name__ == "__main__":
     import json
     import astropy.units as u

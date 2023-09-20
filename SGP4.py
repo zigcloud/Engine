@@ -17,7 +17,7 @@ class Sgp4Propagator:
         self.site = site
         self.observer = observerLocation
         self.tle = TlePath
-        self.objectID = ObjectID(objID)
+        self.objectID = inputID(objID)
         self.startTime = Time(TimeStartIsot, format='isot', scale='utc')
         self.endTime = Time(TimeEndIsot, format='isot', scale='utc')
         self.stepTime = TimeDelta(TimeStep, format='sec')

@@ -5,10 +5,9 @@ import astropy.constants as c
 from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
 from TLEtoKepler import TLEtoKeplerConverter
-from astropy.utils.iers import conf
 
-conf.auto_max_age = None
 class KeplerPropagator:
+    #TODO - Kepler Propagator is giving strange values not coresponding to the reality
     def __init__(self, site: str, observerLocation: EarthLocation, Kepler: List[KeplerianElements] or Path, objectID: str,
                  TimeStartIsot: str, TimeEndIsot: str, TimeStep: float, verbose: bool = False):
         self.site = site

@@ -11,6 +11,10 @@ from typing import List, Dict, Optional, Tuple
 from astropy.coordinates import AltAz, GCRS, SkyCoord
 import astropy.constants as c
 import astropy.units as u
+import json
+
+ssr = './Resources/SSR-Full-20230821.csv'
+ssr = Table.read(ssr, format='ascii.csv', delimiter=';')
 
 fullCircle = 360
 halfCircle = 180
@@ -29,11 +33,20 @@ outputTablenames = ['ObjectID','MJD','Range','Phase angle','RA','DE',
 outputTabletypes = [str, float, float, float,float,float,
                     float,float,float,float,float,float,float,float, bool, float, float]
 outputTableunits = ['',u.day, u.m, u.deg, u.deg, u.deg,
-                    u.arcsec / u.s, u.arcsec / u.s, u.arcsec, '--','--','--','--','--', '--', u.deg, u.deg]
+                    u.arcsec / u.s, u.arcsec / u.s, u.arcsec, '--','--','--',u.mag,u.mag, '--', u.deg, u.deg]
+outputTableround = [-1, 9, 5,5,5,5,5,5,5,5,5,5,5,5,-1,5,5]
+
+phaseParamsTabNames = ["run_id", "norad", "name", "phase_min", "phase_max", "mjd_min", "mjd_max",
+                       "Hejduk_med_beta", "Hejduk_med_AreaRo","Hejduk_med_AbsMag", "Hejduk_med_beta_sigma",
+                       "Hejduk_med_AreaRo_sigma", "Hejduk_med_AbsMag_sigma", "Hejduk_med_no_of_points",
+                       "Hejduk_predictionBand_upper_AreaRo", "Hejduk_predictionBand_lower_AreaRo",
+                       "Hejduk_predictionBand_upper_AbsMag", "Hejduk_predictionBand_lower_AbsMag"]
+phaseParamsTabTypes = [str, str, str, float, float, float, float, float, float, float, float, float, float, int, float, float, float, float]
+
 
 @dataclass_json
 @dataclass
-class ObjectID(object):
+class inputID(object):
     id: str = ''
     cospar: bool = False
     norad: bool = False
@@ -52,7 +65,34 @@ class ObjectID(object):
                 self.population = True
         else:
             self.directTles = True
+@dataclass_json
+@dataclass
+class ObjectID(object):
+    id: str = ''
+    name: str = ''
+    cospar: bool = False
+    norad: bool = False
+    name: str = ''
 
+    def __post_init__(self):
+        if len(self.id)<5:
+            self.id = '0'*(5-len(self.id)) + self.id
+
+        if self.id[0:4].isdigit() and self.id[4].isalpha():
+            self.cospar = True
+        elif self.id.isdigit():
+            self.norad = True
+
+        # if self.norad or self.cospar:
+        #     self.name = ssrInfo(self, ssr)[1]
+
+def isStringInTable(table, string, columnid):
+    newTable = Table(names=table.columns, dtype=table.dtype)
+    for row in table.iterrows():
+        if string in row[columnid]:
+            newTable.add_row(row)
+
+    return newTable
 @dataclass_json
 @dataclass
 class KeplerianElements(object):
@@ -109,3 +149,35 @@ def Hejduk_F1F2_beta(phaseAngle, a_ro, beta):
     F_spec = 1/(4*np.pi)
     return -26.74 - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(149597871000.0)
 
+def GetLuminosity(timeArray):
+    #only a dummy function
+    return [0.0 for i in range(len(timeArray))]
+
+def getTableFromJson(jsonFile):
+    phaseParamsTab = Table(names=phaseParamsTabNames, dtype=phaseParamsTabTypes)
+    with open(jsonFile, 'r') as f:
+        data = json.load(f)
+
+    for key, value in data.items():
+        phaseParamsTab.add_row(value)
+
+    return phaseParamsTab
+
+# def ssrInfo(objectID, ssr):
+#     if objectID.norad:
+#         try:
+#             idx = int(np.where(ssr['NORAD_CAT_ID'] == int(objectID.id))[0])
+#             cospar = ssr[idx]['OBJECT_ID'].split('-')
+#             cospar = cospar[0][2:5] + cospar[1]
+#             return cospar, f'{ssr[idx]["OBJECT_NAME"]} / {ssr[idx]["COUNTRY"]}'
+#         except TypeError:
+#             print(objectID.id)
+#
+#     elif objectID.cospar:
+#         if int(objectID.id[0:2]) > 24:
+#             cospar = '19' + objectID.id[0:2] + '-' + objectID.id[2:]
+#         else:
+#             cospar = '20' + objectID.id[0:2] + '-' + objectID.id[2:]
+#         idx = np.where(ssr['OBJECT_ID'] == cospar)[0]
+#         norad = ssr[idx]['NORAD_CAT_ID']
+#         return norad.value[0], f'{ssr[idx]["OBJECT_NAME"]} / {ssr[idx]["COUNTRY"]}'
