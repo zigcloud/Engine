@@ -26,19 +26,25 @@ class Transformator:
             print(f'TLEs read!\nObjects to be evaluaeted: {len(self.elements)}')
         self.GM = c.GM_earth.value
         self.stateVector = []
-        self.startTime = Time(TimeStartIsot, format='isot', scale='utc')
-        self.endTime = Time(TimeEndIsot, format='isot', scale='utc')
+        if TimeStartIsot is None or TimeStartIsot == '':
+            self.startTime = Time(Time.now().isot, format='isot', scale='utc')
+        else:
+            self.startTime = Time(TimeStartIsot, format='isot', scale='utc')
+        if TimeStartIsot is None or TimeStartIsot == '':
+            self.endTime = Time(Time.now().isot, format='isot', scale='utc')
+        else:
+            self.endTime = Time(TimeEndIsot, format='isot', scale='utc')
         self.stepTime = TimeDelta(TimeStep, format='sec')
         self.obs = observerLocation
         self.verbose = verbose
         self.savePath = savePath
         print(f'Propagator {mode} initialization ...')
         if mode == 'Kepler':
-            self.propagator = KeplerPropagator(site, observerLocation, Elements, objectID, TimeStartIsot,
-                                               TimeEndIsot, TimeStep, verbose=self.verbose)
+            self.propagator = KeplerPropagator(site, observerLocation, Elements, objectID, self.startTime.isot,
+                                               self.endTime.isot, TimeStep, verbose=self.verbose)
         elif mode =='SGP4' and type(Elements) != List:
-            self.propagator = Sgp4Propagator(site, observerLocation, Elements, objectID, TimeStartIsot,
-                                             TimeEndIsot, TimeStep, verbose=self.verbose)
+            self.propagator = Sgp4Propagator(site, observerLocation, Elements, objectID, self.startTime.isot,
+                                             self.endTime.isot, TimeStep, verbose=self.verbose)
         else:
             exit('Bad mode selected!')
         print(f'Propagator {mode} initialization done!')
@@ -343,17 +349,17 @@ if __name__ == '__main__':
     #Elements - List of Keplerian element (see Utils) or Path to the Tle file
     #ObjectID - ID of the target - Norad, Cospar, or specific name of population or empty string (than whole
     # population is taken)
-    #TimeStartIsot - Isot date and time of the start
-    #TimeEndIsot - Isot date and time of the end
+    #TimeStartIsot - Isot date and time of the start - if None or empty string "" actual utc time is taken
+    #TimeEndIsot - Isot date and time of the end - if None or empty string "" actual utc time is taken
     #TimeStep - in second - length of the ephermeris step also serves as Exposure time to calculate the Length
     #mode - Kepler or SGP4 - defines which propagator shall be used
     #verbose - Bool - whether the more talkative output shall be shown or not
     #savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
     #phaseParams - Path to the summary json file with result from the phase curve fitting. Particular files can
     # be merged into the single json with outside function readJsonDat.py
-    a = Transformator(site='AGO',observerLocation=obs, Elements=tleData, objectID='37775',
-                      TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-11-15T10:00:00',
-                      TimeStep=600, mode='Kepler', verbose=False, savePath=outPath,
+    a = Transformator(site='AGO',observerLocation=obs, Elements=tleData, objectID='starlinkGEN1.txt',
+                      TimeStartIsot='', TimeEndIsot='',
+                      TimeStep=600, mode='SGP4', verbose=False, savePath=outPath,
                       phaseParams=Path('./Resources/summaryPhaseCurveTable.json'))
 
     tbl = a.Run() #Main transformator's funtion - return astropy.table.Table with names shown in Utils
