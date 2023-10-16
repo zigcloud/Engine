@@ -6,6 +6,7 @@ from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
 from TLEtoKepler import TLEtoKeplerConverter
 
+
 class KeplerPropagator:
     #TODO - Kepler Propagator is giving strange values not coresponding to the reality
     def __init__(self, site: str, observerLocation: EarthLocation, Kepler: List[KeplerianElements] or Path, objectID: str,
@@ -46,8 +47,8 @@ class KeplerPropagator:
     def _pprint_stateVector(self):
         for i,obj in enumerate(self.stateVector):
             for j, step in enumerate(obj):
-                r = (np.round(step.r,3) * u.m).to(u.km)
-                v = (np.round(step.v,3) * (u.m/u.s)).to(u.km/u.s)
+                r = (np.round(step.r, 3) * u.m).to(u.km)
+                v = (np.round(step.v, 3) * (u.m/u.s)).to(u.km/u.s)
                 print(f'Object ID position  : {self.elements[i].id.id}\n'
                       f'Time of the step    : {self.timeArray[j].isot}\n'
                       f'GCRS State vector   : x={np.round(r[0],3)} y={np.round(r[1],3)} z={np.round(r[2],3)}\n'
@@ -70,18 +71,18 @@ class KeplerPropagator:
         maxit = 15
         eps = 10e-9
 
-        i=0
+        i = 0
         M = M % np.pi/2
 
-        if keplerElements.e<0.8:
-            E=M
+        if keplerElements.e < 0.8:
+            E = M
         else:
-            E=np.pi;
+            E = np.pi
 
         f = E - keplerElements.e * np.sin(E) - M
         E = E - f / (1.0 - keplerElements.e * np.cos(E))
         while abs(f) > eps:
-            i+=1
+            i += 1
             if i == maxit:
                 print('Maxit reached!')
                 break
@@ -181,6 +182,7 @@ if __name__ == "__main__":
     # test = KeplerPropagator(KeplerianElements(A,E,I,NODE,PER,M),c.GM_earth.value, TPER)
 
     import time as t
+    from pathlib import Path
     ti = t.time()
     print('computation started')
     test = KeplerPropagator('AGO',obs, Path('/Users/matoz/Documents/Ephemeris/data/20230228/selection.txt'),'',

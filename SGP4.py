@@ -88,9 +88,9 @@ class Sgp4Propagator:
         self._getTimeArray()
         self.decide3leFunction()
 
-        moonSun = MoonSunGenerator(self.observer, self.startTime.isot, self.endTime.isot, self.stepTime.sec)
         satGCRS = [[sat.sgp4(obsTime.jd, 0) for obsTime in self.timeArray] for sat in self.satellites]
-        self.stateVector = [[stateVector(r=np.array(sat[i][1])*1000, v=np.array(sat[i][2])*1000) for i,time in enumerate(self.timeArray)] for sat in satGCRS]
+        self.stateVector = [[stateVector(r=np.array(sat[i][1])*1000, v=np.array(sat[i][2])*1000)
+                             for i, time in enumerate(self.timeArray)] for sat in satGCRS]
         if self.verbose:
             self._pprint_stateVector()
 
