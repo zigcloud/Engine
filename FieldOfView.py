@@ -39,5 +39,15 @@ class FieldOfView:
                 group.pprint_all()
 
 if __name__ == '__main__':
+    from astropy.table import Table
 
-    teleskop = FieldOfView(5,5,0,0)
+    tbl = Table(names=outputTablenames, dtype=outputTabletypes, units=outputTableunits)
+
+    with open('example.txt', 'r') as outputTbl:
+        data = outputTbl.read().splitlines()
+        for line in data:
+            if line.startswith('#')!= True and len(line)>0:
+                tbl.add_row(line.split('\t'))
+
+    teleskop = FieldOfView(width=5, height=5, ra=0, dec=0, population=tbl, verbose=True)
+    teleskop.prettyPrintOutput()
