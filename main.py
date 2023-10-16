@@ -350,7 +350,7 @@ if __name__ == '__main__':
     #verbose - Bool - whether the more talkative output shall be shown or not
     #savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
     #phaseParams - Path to the summary json file with result from the phase curve fitting. Particular files can
-    # be merged into the sinlge json with outside function readJsonDat.py
+    # be merged into the single json with outside function readJsonDat.py
     a = Transformator(site='AGO',observerLocation=obs, Elements=tleData, objectID='37775',
                       TimeStartIsot='2023-09-15T10:00:00', TimeEndIsot='2023-11-15T10:00:00',
                       TimeStep=600, mode='Kepler', verbose=False, savePath=outPath,
