@@ -9,7 +9,7 @@ from Utils import *
 from typing import List
 from pathlib import Path
 import time
-
+from FieldOfView import FieldOfView
 
 class Transformator:
     def __init__(self, site: str, observerLocation: EarthLocation, Elements: List[KeplerianElements] or Path,
@@ -189,41 +189,6 @@ class Transformator:
                                   dec=[res[self.site][t]['DE_t_moon'] for t in mjd] * u.deg)
 
 
-class FieldOfView:
-    def __init__(self, width: float , height: float, ra: float, dec: float, population: astropy.table.Table,
-                 verbose: bool=False):
-        self.width = width
-        self.height = height
-        self.center = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
-        self.population = population
-        self.verbose = verbose
-
-
-    def addSkyCoordToPopulation(self):
-        self.population['Coords'] = SkyCoord(ra=self.population['RA'], dec=self.population['DE'],
-                                             obstime=Time(self.population['MJD'], format='mjd', scale='utc'))
-
-    def determineCircularFoV(self):
-        self.circularFoVRiadus = np.sqrt((self.width * self.height)/np.pi)
-
-    def findObjectsInFov(self):
-        self.determineCircularFoV()
-        self.addSkyCoordToPopulation()
-        self.population['Separation'] = self.population['Coords'].separation(self.center)
-        return self.population[self.population['Separation'] <= self.circularFoVRiadus]
-
-    def prettyPrintOutput(self):
-        visibleObjects = self.findObjectsInFov()
-        epochs = list(set(visibleObjects['MJD']))
-
-        for epoch in epochs:
-            mask = visibleObjects['MJD']==epoch
-            group = visibleObjects[mask]
-            print(f'At epoch {Time(epoch, format="mjd").isot} were visible objects:\n'
-                  f'NORADs: {", ".join([i[0] for i in group.iterrows()])}')
-
-            if self.verbose:
-                group.pprint_all()
 
 
 if __name__ == '__main__':
@@ -294,7 +259,15 @@ if __name__ == '__main__':
     plt.show()
 
 
+    # Visible objects filter
+    # FiledOfView input parameters
+    # width - width of the FoV in degrees
+    # height - height of the FoV in degrees
+    # ra - Right ascension of the center of the FoV in degrees
+    # dec - Declination of the center of the FoV in degrees
+    # population - Transformator class output table or astropy.Table
+    # verbose - whether to print also the table for the visible objects
 
-    teleskop = FieldOfView(5,5,0,0,tbl, True)
+    teleskop = FieldOfView(width=5, height=5, ra=0, dec=0, population=tbl, verbose=True)
 
     teleskop.prettyPrintOutput()
