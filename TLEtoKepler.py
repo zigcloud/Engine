@@ -1,4 +1,6 @@
 from Utils import *
+from astropy.time import Time
+import astropy.constants as c
 
 class TLEtoKeplerConverter:
     def __init__(self, tle: Path, objectID: str):

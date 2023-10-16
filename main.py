@@ -1,3 +1,5 @@
+import astropy.table
+
 from kepler import KeplerPropagator
 from SGP4 import Sgp4Propagator
 from MoonSun import *
@@ -77,8 +79,8 @@ class Transformator:
         self.shadow = []
         for obj in self.propagator.stateVector:
             sat = []
-            for i, time in enumerate(self.propagator.timeArray):
-                satItrs = ConvertGcrsToItrs(Time(time, format='isot'), obj[i].r)
+            for i, step in enumerate(self.propagator.timeArray):
+                satItrs = ConvertGcrsToItrs(Time(step, format='isot'), obj[i].r)
                 sat.append(satItrs)
             self.coordsITRS.append(SkyCoord(sat,
                                             unit=u.m, representation_type='cartesian', frame='itrs',
@@ -187,6 +189,43 @@ class Transformator:
                                   dec=[res[self.site][t]['DE_t_moon'] for t in mjd] * u.deg)
 
 
+class FieldOfView:
+    def __init__(self, width: float , height: float, ra: float, dec: float, population: astropy.table.Table,
+                 verbose: bool=False):
+        self.width = width
+        self.height = height
+        self.center = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
+        self.population = population
+        self.verbose = verbose
+
+
+    def addSkyCoordToPopulation(self):
+        self.population['Coords'] = SkyCoord(ra=self.population['RA'], dec=self.population['DE'],
+                                             obstime=Time(self.population['MJD'], format='mjd', scale='utc'))
+
+    def determineCircularFoV(self):
+        self.circularFoVRiadus = np.sqrt((self.width * self.height)/np.pi)
+
+    def findObjectsInFov(self):
+        self.determineCircularFoV()
+        self.addSkyCoordToPopulation()
+        self.population['Separation'] = self.population['Coords'].separation(self.center)
+        return self.population[self.population['Separation'] <= self.circularFoVRiadus]
+
+    def prettyPrintOutput(self):
+        visibleObjects = self.findObjectsInFov()
+        epochs = list(set(visibleObjects['MJD']))
+
+        for epoch in epochs:
+            mask = visibleObjects['MJD']==epoch
+            group = visibleObjects[mask]
+            print(f'At epoch {Time(epoch, format="mjd").isot} were visible objects:\n'
+                  f'NORADs: {", ".join([i[0] for i in group.iterrows()])}')
+
+            if self.verbose:
+                group.pprint_all()
+
+
 if __name__ == '__main__':
     ti = time.time()
     print('computation started')
@@ -194,7 +233,7 @@ if __name__ == '__main__':
     # observer Location
     obs = EarthLocation(lon=17.2736306 * u.deg, lat=48.372528 * u.deg, height=536.1 * u.m)
     # inputTLE file
-    tleData = Path(r'./3le.txt')
+    tleData = Path(r'./starlinkGEN1_tle.txt')
     # output Table name and path
     outPath = Path(r'./')
 
@@ -212,7 +251,7 @@ if __name__ == '__main__':
     # savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
     # phaseParams - Path to the summary json file with result from the phase curve fitting. Particular files can
     # be merged into the single json with outside function readJsonDat.py
-    a = Transformator(site='AGO', observerLocation=obs, Elements=tleData, objectID='starlinkGEN1.txt',
+    a = Transformator(site='AGO', observerLocation=obs, Elements=tleData, objectID='',
                       TimeStartIsot='', TimeEndIsot='',
                       TimeStep=600, mode='SGP4', verbose=False, savePath=outPath,
                       phaseParams=Path('./Resources/summaryPhaseCurveTable.json'))
@@ -243,9 +282,9 @@ if __name__ == '__main__':
     ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
     ax_histy = ax.inset_axes([1.05, 0, 0.25, 1], sharey=ax)
     # Draw the scatter plot and marginals.
-    x = [line[0] for line in tbl.iterrows(['Lon'])]
-    y = [line[0] for line in tbl.iterrows(['Lat'])]
-    labels = [line[0] for line in tbl.iterrows(['ObjectID'])]
+    x = [line[0] for line in tbl.iterrows('Lon')]
+    y = [line[0] for line in tbl.iterrows('Lat')]
+    labels = [line[0] for line in tbl.iterrows('ObjectID')]
     scatter_hist(x, y, ax, ax_histx, ax_histy)
     cx.add_basemap(ax, crs=countries.crs.to_string(), source=cx.providers.CartoDB.Voyager)
 
@@ -253,3 +292,9 @@ if __name__ == '__main__':
     plt.ylabel("Latitude [°]")
     plt.savefig(Path(outPath, a.filename.replace('.txt', '.png')), format='png', dpi=300)
     plt.show()
+
+
+
+    teleskop = FieldOfView(5,5,0,0,tbl, True)
+
+    teleskop.prettyPrintOutput()
