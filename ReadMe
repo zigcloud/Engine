@@ -4,5 +4,8 @@ To setup the Engine in pycharm please use the pycharm VCS control integration ht
   3. select Github and the Repository zigcloud/Engine
   4. PyCharm will automatically create venv and install all packages based on the requirements.txt file
 
-To setup the Engine manually
-  1. 
+To setup the Engine manually you need Git
+  1. Basic commands and installation for Git https://education.github.com/git-cheat-sheet-education.pdf
+  2. Create empty folder and clone the zigcloud/Engine using git commands
+  3. Optional: Create virtual environment
+  4. using the selected Python environment enabled install the site packages using the requirements.txt file -> pip install -r requirements.txt
