@@ -1,0 +1,8 @@
+To setup the Engine in pycharm please use the pycharm VCS control integration https://www.jetbrains.com/help/pycharm/manage-projects-hosted-on-github.html#share-on-GitHub
+  1. Login to Github and add your account to PyCharm
+  2. Through VCS card select Get from Version Control
+  3. select Github and the Repository zigcloud/Engine
+  4. PyCharm will automatically create venv and install all packages based on the requirements.txt file
+
+To setup the Engine manually
+  1. 
