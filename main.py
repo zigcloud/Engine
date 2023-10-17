@@ -116,7 +116,7 @@ class Transformator:
         self.magAbs = [Hejduk_F1F2_beta(0, self.areaRho[obj], self.beta[obj])
                        for obj in range(len(self.elements))]
         # TODO - to implement Luminosity function GetLuminosity
-        self.luminosity = [GetLuminosity(self.propagator.timeArray) for _ in range(len(self.elements))]
+        self.luminosity = [GetLuminosity(np.array(self.magAbs)) for _ in range(len(self.elements))]
 
         print('Transformation done, time: ' + str(time.time() - actualRunTime))
         print('Generating output Table ...')
@@ -156,14 +156,12 @@ class Transformator:
     def SaveOutputTable(self):
 
         out = self.outputTable
-        rounding = dict(zip(outputTablenames, outputTableround))
-        out.round(rounding)
+        out.pprint_all()
         with open(Path(self.savePath, self.filename), 'w') as f:
             f.write('#' + '\t'.join(outputTablenames) + '\n')
             f.write('#' + '\t'.join([str(un) for un in outputTableunits]) + '\n')
             for line in out:
-                f.write('\t'.join(str(n) for n in line) + '\n')
-
+                f.write(format_string.format(*line))
         print(f'Output saved at: {Path(self.savePath, self.filename).resolve()}')
 
     def getMoonSun(self, timeArr):

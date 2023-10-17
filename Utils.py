@@ -5,6 +5,7 @@ from dataclasses_json import dataclass_json
 from astropy.coordinates import AltAz, GCRS, SkyCoord, EarthLocation
 import astropy.units as u
 import json
+import astropy.constants as c
 from typing import List
 from pathlib import Path
 
@@ -23,14 +24,13 @@ dummyAPmag = 20
 rightAngle = 90
 earthRadiusInMetres = 6378150
 mjdJdShift = 2400000.5
+format_string = '{}\t{:.9f}\t{:.3e}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.3e}\t{}\t{:.5f}\t{:.5f}\n'
 outputTablenames = ['ObjectID','MJD','Range','Phase angle','RA','DE',
                     'dRA','dDE','Length','Beta','A*rho', 'm_abs','m_app','Luminosity', 'Shadow', 'Lon', 'Lat']
 outputTabletypes = [str, float, float, float,float,float,
                     float,float,float,float,float,float,float,float, bool, float, float]
 outputTableunits = ['',u.day, u.m, u.deg, u.deg, u.deg,
-                    u.arcsec / u.s, u.arcsec / u.s, u.arcsec, '--','--','--',u.mag,u.mag, '--', u.deg, u.deg]
-outputTableround = [-1, 9, 5,5,5,5,5,5,5,5,5,5,5,5,-1,5,5]
-
+                    u.arcsec / u.s, u.arcsec / u.s, u.arcsec, '--',u.m*u.m,u.mag,u.mag, u.W,'--', u.deg, u.deg]
 phaseParamsTabNames = ["run_id", "norad", "name", "phase_min", "phase_max", "mjd_min", "mjd_max",
                        "Hejduk_med_beta", "Hejduk_med_AreaRo","Hejduk_med_AbsMag", "Hejduk_med_beta_sigma",
                        "Hejduk_med_AreaRo_sigma", "Hejduk_med_AbsMag_sigma", "Hejduk_med_no_of_points",
@@ -123,17 +123,17 @@ class stateVector(object):
 class RotationMatrix(object):
     theta: float = 0
 
-    def Rx(self, theta):
+    def Rx(theta):
         return np.matrix([[1, 0, 0],
                           [0, np.cos(theta), -np.sin(theta)],
                           [0, np.sin(theta), np.cos(theta)]])
 
-    def Ry(self, theta):
+    def Ry(theta):
         return np.matrix([[np.cos(theta), 0, np.sin(theta)],
                           [0, 1, 0],
                           [-np.sin(theta), 0, np.cos(theta)]])
 
-    def Rz(self, theta):
+    def Rz(theta):
         return np.matrix([[np.cos(theta), -np.sin(theta), 0],
                           [np.sin(theta), np.cos(theta), 0],
                           [0, 0, 1]])
@@ -144,9 +144,10 @@ def Hejduk_F1F2_beta(phaseAngle, a_ro, beta):
     F_spec = 1/(4*np.pi)
     return -26.74 - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(149597871000.0)
 
-def GetLuminosity(timeArray):
+def GetLuminosity(absMag):
     #only a dummy function
-    return [0.0 for i in range(len(timeArray))]
+    luminosity = c.L_sun * np.power(10,(-absMag/2.512))
+    return luminosity
 
 def getTableFromJson(jsonFile):
     phaseParamsTab = Table(names=phaseParamsTabNames, dtype=phaseParamsTabTypes)
