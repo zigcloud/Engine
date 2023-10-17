@@ -273,6 +273,7 @@ def GetAngularDistance(obj1, obj2):
 
 
 def GetRatesProjection(dRA, dDE):
+    print(dRA, dDE, np.sqrt(dRA**2+dDE**2))
     return np.sqrt(dRA**2+dDE**2)
 
 
