@@ -107,8 +107,8 @@ class KeplerianElements(object):
 @dataclass_json
 @dataclass
 class stateVector(object):
-    r: np.array= np.zeros(3)
-    v: np.array = np.zeros(3)
+    r: np.array
+    v: np.array
     def values(self):
         return self.r,self.v
     def pprint(self):

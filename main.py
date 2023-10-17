@@ -1,5 +1,3 @@
-import astropy.table
-
 from kepler import KeplerPropagator
 from SGP4 import Sgp4Propagator
 from MoonSun import *
@@ -154,9 +152,7 @@ class Transformator:
             self.SaveOutputTable()
 
     def SaveOutputTable(self):
-
         out = self.outputTable
-        out.pprint_all()
         with open(Path(self.savePath, self.filename), 'w') as f:
             f.write('#' + '\t'.join(outputTablenames) + '\n')
             f.write('#' + '\t'.join([str(un) for un in outputTableunits]) + '\n')
@@ -224,7 +220,9 @@ if __name__ == '__main__':
 
     # PLOTTING
     import matplotlib
+    import warnings
 
+    warnings.simplefilter(action='ignore', category=FutureWarning)
     matplotlib.rcParams.update({'font.size': 12})
     import matplotlib.pyplot as plt
     import geopandas as gpd
