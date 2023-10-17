@@ -1,7 +1,6 @@
 from kepler import KeplerPropagator
 from SGP4 import Sgp4Propagator
 from MoonSun import *
-import astropy.constants as c
 from TLEtoKepler import TLEtoKeplerConverter
 from Utils import *
 from typing import List
@@ -132,8 +131,8 @@ class Transformator:
                         self.coordsGCRS[i][j].dec.deg * u.deg,  # DEC
                         self.dRA[i][j].to(u.arcsec / u.s),  # dRA - only single value for now
                         self.dDE[i][j].to(u.arcsec / u.s),  # dDE - only single value for now
-                        GetRatesProjection(self.dRA[i][j].to(u.arcsec / u.s),
-                                           self.dDE[i][j].to(u.arcsec / u.s)) * self.stepTime,  # Length
+                        GetRatesProjection(self.dRA[i][j],
+                                           self.dDE[i][j]) * self.stepTime,  # Length
                         self.beta[i],  # 'Beta'
                         self.areaRho[i],  # 'A*rho'
                         self.magAbs[i],  # 'm_abs'
