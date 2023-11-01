@@ -24,6 +24,7 @@ dummyAPmag = 20
 rightAngle = 90
 earthRadiusInMetres = 6378150
 mjdJdShift = 2400000.5
+magSun = -26.74
 format_string = '{}\t{:.9f}\t{:.3e}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.3e}\t{}\t{:.5f}\t{:.5f}\n'
 outputTablenames = ['ObjectID','MJD','Range','Phase angle','RA','DE',
                     'dRA','dDE','Length','Beta','A*rho', 'm_abs','m_app','Luminosity', 'Shadow', 'Lon', 'Lat']
@@ -142,11 +143,11 @@ def Hejduk_F1F2_beta(phaseAngle, a_ro, beta):
     x = np.array(phaseAngle)
     F_diff = 2/(3*np.pi*np.pi)*((np.pi-x)*np.cos(x)+np.sin(x))
     F_spec = 1/(4*np.pi)
-    return -26.74 - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(149597871000.0)
+    return magSun - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(149597871000.0)
 
 def GetLuminosity(absMag):
     #only a dummy function
-    luminosity = c.L_sun * np.power(10,(-absMag/2.512))
+    luminosity = c.L_sun * np.power(10,(-0.4*(absMag-magSun)))
     return luminosity
 
 def getTableFromJson(jsonFile):
