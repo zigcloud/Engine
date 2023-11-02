@@ -147,7 +147,7 @@ def Hejduk_F1F2_beta(phaseAngle, a_ro, beta):
 
 def GetLuminosity(absMag):
     #only a dummy function
-    luminosity = c.L_sun * np.power(10,(-0.4*(absMag-magSun)))
+    luminosity = c.L_sun * np.power(10,(-(absMag-magSun)*(2/5)))
     return luminosity
 
 def getTableFromJson(jsonFile):
