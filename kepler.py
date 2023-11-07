@@ -92,12 +92,12 @@ class KeplerPropagator:
         return E
 
     def _getStateVector(self, keplerElements: KeplerianElements, time: Time):
-        print(keplerElements.n)
+        # print(keplerElements.n)
         if keplerElements.timeSincePerigee is not None or keplerElements.timeSincePerigee == 0:
             M = keplerElements.M0
         else:
             if keplerElements.n is not None:
-                M = keplerElements.M0 + keplerElements.n * (time.jd -keplerElements.epoch.jd )
+                M = keplerElements.M0 + keplerElements.n * (time.jd - keplerElements.epoch.jd )
             else:
                 n = np.sqrt(self.GM / (keplerElements.a * keplerElements.a*keplerElements.a))
                 M = keplerElements.M0 + n * keplerElements.timeSincePerigee

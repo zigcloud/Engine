@@ -6,38 +6,9 @@ from astropy.coordinates import AltAz, GCRS, SkyCoord, EarthLocation
 import astropy.units as u
 import json
 import astropy.constants as c
+from Variables import *
 from typing import List
 from pathlib import Path
-
-ssr = './Resources/SSR-Full-20230821.csv'
-ssr = Table.read(ssr, format='ascii.csv', delimiter=';')
-
-fullCircle = 360
-halfCircle = 180
-secondsInMinute = 60
-secondsInHour = 3600
-secondsInDay = 86400
-minutesInHour = 60
-minutesInDay = 1440
-hoursInDay = 24
-dummyAPmag = 20
-rightAngle = 90
-earthRadiusInMetres = 6378150
-mjdJdShift = 2400000.5
-magSun = -26.74
-format_string = '{}\t{:.9f}\t{:.3e}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\t{:.3e}\t{}\t{:.5f}\t{:.5f}\n'
-outputTablenames = ['ObjectID','MJD','Range','Phase angle','RA','DE',
-                    'dRA','dDE','Length','Beta','A*rho', 'm_abs','m_app','Luminosity', 'Shadow', 'Lon', 'Lat']
-outputTabletypes = [str, float, float, float,float,float,
-                    float,float,float,float,float,float,float,float, bool, float, float]
-outputTableunits = ['',u.day, u.m, u.deg, u.deg, u.deg,
-                    u.arcsec / u.s, u.arcsec / u.s, u.arcsec, '--',u.m*u.m,u.mag,u.mag, u.W,'--', u.deg, u.deg]
-phaseParamsTabNames = ["run_id", "norad", "name", "phase_min", "phase_max", "mjd_min", "mjd_max",
-                       "Hejduk_med_beta", "Hejduk_med_AreaRo","Hejduk_med_AbsMag", "Hejduk_med_beta_sigma",
-                       "Hejduk_med_AreaRo_sigma", "Hejduk_med_AbsMag_sigma", "Hejduk_med_no_of_points",
-                       "Hejduk_predictionBand_upper_AreaRo", "Hejduk_predictionBand_lower_AreaRo",
-                       "Hejduk_predictionBand_upper_AbsMag", "Hejduk_predictionBand_lower_AbsMag"]
-phaseParamsTabTypes = [str, str, str, float, float, float, float, float, float, float, float, float, float, int, float, float, float, float]
 
 
 @dataclass_json
@@ -139,16 +110,17 @@ class RotationMatrix(object):
                           [np.sin(theta), np.cos(theta), 0],
                           [0, 0, 1]])
 
-def Hejduk_F1F2_beta(phaseAngle, a_ro, beta):
+def Hejduk_F1F2_beta(phaseAngle, a_ro, beta, range=None):
     x = np.array(phaseAngle)
     F_diff = 2/(3*np.pi*np.pi)*((np.pi-x)*np.cos(x)+np.sin(x))
     F_spec = 1/(4*np.pi)
-    return magSun - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(149597871000.0)
-
-def GetLuminosity(absMag):
+    if range is None:
+        return magSun.Value - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(149597871000.0)
+    else:
+        return magSun.Value - 2.5*np.log10(a_ro*(beta*F_diff+(1-beta)*F_spec)) + 5*np.log10(range.value)
+def GetLuminosity(objMag):
     #only a dummy function
-    luminosity = c.L_sun * np.power(10,(-(absMag-magSun)*(2/5)))
-    return luminosity
+    return LSunV.Value * np.power(10,(-(objMag-magSunV.Value)*(2/5)))
 
 def getTableFromJson(jsonFile):
     phaseParamsTab = Table(names=phaseParamsTabNames, dtype=phaseParamsTabTypes)
@@ -274,7 +246,6 @@ def GetAngularDistance(obj1, obj2):
 
 
 def GetRatesProjection(dRA, dDE):
-    print(dRA, dDE, np.sqrt(dRA**2+dDE**2))
     return np.sqrt(dRA**2+dDE**2)
 
 

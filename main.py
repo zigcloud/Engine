@@ -72,11 +72,13 @@ class Transformator:
         self.obs = observerLocation
         self.verbose = verbose
         self.savePath = savePath
-        print(f'Propagator {mode} initialization ...')
         if mode == 'Kepler':
+            print(f'Propagator {mode} initialization ...')
+
             self.propagator = KeplerPropagator(site, observerLocation, Elements, objectID, self.startTime.isot,
                                                self.endTime.isot, TimeStep, verbose=self.verbose)
         elif mode == 'SGP4' and type(Elements) != List:
+            print(f'Propagator {mode} initialization ...')
             self.propagator = Sgp4Propagator(site, observerLocation, Elements, objectID, self.startTime.isot,
                                              self.endTime.isot, TimeStep, verbose=self.verbose)
         else:
@@ -109,10 +111,11 @@ class Transformator:
         self.coordsITRS = []
         self.shadow = []
         for obj in self.propagator.stateVector:
-            sat = []
-            for i, step in enumerate(self.propagator.timeArray):
-                satItrs = ConvertGcrsToItrs(Time(step, format='isot'), obj[i].r)
-                sat.append(satItrs)
+            sat = [ConvertGcrsToItrs(Time(step, format='isot'), obj[i].r) for i, step in enumerate(self.propagator.timeArray)]
+            # sat = []
+            # for i, step in enumerate(self.propagator.timeArray):
+            #     satItrs = ConvertGcrsToItrs(Time(step, format='isot'), obj[i].r)
+            #     sat.append(satItrs)
             self.coordsITRS.append(SkyCoord(sat,
                                             unit=u.m, representation_type='cartesian', frame='itrs',
                                             obstime=Time(self.propagator.timeArray, format='isot', location=self.obs),
@@ -125,8 +128,8 @@ class Transformator:
 
         self.coordGeodetic = [ConvertItrsToGeodetic(self.coordsITRS[obj]) for obj in range(len(self.coordsITRS))]
         self.shadow = [GetEarthShadowVectorised([self.propagator.stateVector[obj][i].r
-                                                for i in range(len(self.propagator.timeArray))],
-                                                self.sunAltAz) for obj in range(len(self.coordsITRS))]
+                                                 for i in range(len(self.propagator.timeArray))],
+                                                 self.sunAltAz) for obj in range(len(self.coordsITRS))]
 
         self.phaseAngle = [GetPhaseAngleVectorised(self.obs, self.coordsAltAz[obj], self.sunAltAz)
                            for obj in range(len(self.coordsAltAz))]
@@ -138,8 +141,9 @@ class Transformator:
 
         self.beta = [getBeta(self.phaseParams, self.elements[obj]) for obj in range(len(self.elements))]
         self.areaRho = [getArho(self.phaseParams, self.elements[obj]) for obj in range(len(self.elements))]
-
-        self.magApp = [Hejduk_F1F2_beta(self.phaseAngle[obj], self.areaRho[obj], self.beta[obj])
+        self.range = [self.coordsAltAz[obj].distance for obj in range(len(self.elements))]
+        self.magApp = [Hejduk_F1F2_beta(self.phaseAngle[obj], self.areaRho[obj], self.beta[obj],
+                                        range=self.range[obj])
                        for obj in range(len(self.elements))]
         self.magAbs = [Hejduk_F1F2_beta(0, self.areaRho[obj], self.beta[obj])
                        for obj in range(len(self.elements))]
@@ -147,7 +151,7 @@ class Transformator:
         self.magAbs = [Hejduk_F1F2_beta(0, self.areaRho[obj], self.beta[obj])
                        for obj in range(len(self.elements))]
         # TODO - to implement Luminosity function GetLuminosity
-        self.luminosity = [GetLuminosity(np.array(self.magAbs)) for _ in range(len(self.elements))]
+        self.luminosity = [GetLuminosity(np.array(self.magApp[obj])) for obj in range(len(self.elements))]
 
         print('Transformation done, time: ' + str(time.time() - actualRunTime))
         print('Generating output Table ...')
@@ -160,7 +164,7 @@ class Transformator:
                 line = [self.propagator.elements[i].id.id,  # ObjectID
                         self.propagator.timeArray[j].mjd * u.day,  # MJD
                         self.coordsAltAz[i][j].distance,  # Range
-                        self.phaseAngle[i][j] * u.deg,  # Phase Angle
+                        np.degrees(self.phaseAngle[i][j]) * u.deg,  # Phase Angle
                         self.coordsGCRS[i][j].ra.deg * u.deg,  # RA
                         self.coordsGCRS[i][j].dec.deg * u.deg,  # DEC
                         self.dRA[i][j].to(u.arcsec / u.s),  # dRA - only single value for now
@@ -243,9 +247,9 @@ if __name__ == '__main__':
     # savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
     # phaseParams - Path to the summary json file with result from the phase curve fitting. Particular files can
     # be merged into the single json with outside function readJsonDat.py
-    a = Transformator(site='AGO', observerLocation=obs, Elements=tleData, objectID='',
+    a = Transformator(site='AGO', observerLocation=obs, Elements=tleData, objectID='STARLIN',
                       TimeStartIsot='', TimeEndIsot='',
-                      TimeStep=600, mode='SGP4', verbose=False, savePath=outPath,
+                      TimeStep=1, mode='SGP4', verbose=False, savePath=outPath,
                       phaseParams=Path('./Resources/summaryPhaseCurveTable.json'))
 
     tbl = a.Run()  # Main transformator's function - return astropy.table.Table with names shown in Utils
