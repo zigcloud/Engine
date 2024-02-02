@@ -111,6 +111,7 @@ class RotationMatrix(object):
                           [0, 0, 1]])
 
 def Hejduk_F1F2_beta(phaseAngle, a_ro, beta, range=None):
+    print(range)
     x = np.array(phaseAngle)
     F_diff = 2/(3*np.pi*np.pi)*((np.pi-x)*np.cos(x)+np.sin(x))
     F_spec = 1/(4*np.pi)
@@ -307,3 +308,17 @@ def scatter_hist(x, y, ax, ax_histx, ax_histy):
 #         idx = np.where(ssr['OBJECT_ID'] == cospar)[0]
 #         norad = ssr[idx]['NORAD_CAT_ID']
 #         return norad.value[0], f'{ssr[idx]["OBJECT_NAME"]} / {ssr[idx]["COUNTRY"]}'
+
+if __name__ == "__main__":
+    areaRho = np.array([1.16, 3.6, 14.2, 7.6])
+    Beta = np.array([0.39, 0.49, 0.97, 0.85])
+    phi = np.array([13.7, 92.5, 37.3, 50.1])
+    r = np.array([3188.076, 3256.506, 3940.994, 16733.705])
+    mapp = np.array([7.84, 7.3, 5.27, 9.31])
+
+    mappCalc = Hejduk_F1F2_beta(np.radians(phi), areaRho, Beta, r*1000)
+
+    print(mappCalc)
+
+    print(np.round(GetLuminosity(mappCalc)))
+

@@ -247,7 +247,7 @@ if __name__ == '__main__':
     # savePath - Path to the file where output table shall be saved - if None, no output is saved only returned
     # phaseParams - Path to the summary json file with result from the phase curve fitting. Particular files can
     # be merged into the single json with outside function readJsonDat.py
-    a = Transformator(site='AGO', observerLocation=obs, Elements=tleData, objectID='STARLIN',
+    a = Transformator(site='AGO', observerLocation=obs, Elements=tleData, objectID='STARLINK',
                       TimeStartIsot='', TimeEndIsot='',
                       TimeStep=1, mode='SGP4', verbose=False, savePath=outPath,
                       phaseParams=Path('./Resources/summaryPhaseCurveTable.json'))
