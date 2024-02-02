@@ -46,5 +46,3 @@ phaseParamsTabNames = ["run_id", "norad", "name", "phase_min", "phase_max", "mjd
                        "Hejduk_predictionBand_upper_AreaRo", "Hejduk_predictionBand_lower_AreaRo",
                        "Hejduk_predictionBand_upper_AbsMag", "Hejduk_predictionBand_lower_AbsMag"]
 phaseParamsTabTypes = [str, str, str, float, float, float, float, float, float, float, float, float, float, int, float, float, float, float]
-
-print(LSunV, magSunV)

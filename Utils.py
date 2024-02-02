@@ -111,7 +111,6 @@ class RotationMatrix(object):
                           [0, 0, 1]])
 
 def Hejduk_F1F2_beta(phaseAngle, a_ro, beta, range=None):
-    print(range)
     x = np.array(phaseAngle)
     F_diff = 2/(3*np.pi*np.pi)*((np.pi-x)*np.cos(x)+np.sin(x))
     F_spec = 1/(4*np.pi)
