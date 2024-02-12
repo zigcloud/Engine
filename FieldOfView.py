@@ -17,7 +17,7 @@ class FieldOfView:
                                              obstime=Time(self.population['MJD'], format='mjd', scale='utc'))
 
     def determineCircularFoV(self):
-        self.circularFoVRiadus = np.sqrt((self.width * self.height)/np.pi)
+        self.circularFoVRiadus = np.sqrt(((self.width * self.height)/2)/np.pi)
 
     def findObjectsInFov(self):
         self.determineCircularFoV()
